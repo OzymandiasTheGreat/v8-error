@@ -475,8 +475,9 @@ jsi::Value FSBinding::get(jsi::Runtime &rt, const jsi::PropNameID &name) {
                                                        }
 
                                                        JSI_MAKE_UV_ERROR(exc, res, _uvBinding);
-                                                       JSI_CALL_THROWER(exc_err);
-
+//                                                       JSI_CALL_THROWER(exc_err);
+                                                       jsi::Function thrower = rt.global().getPropertyAsFunction(rt, "__hlp_thrower");
+                                                       thrower.call(rt, exc_err);
                                                        delete req;
 
                                                        return JSI_UNDEFINED;
