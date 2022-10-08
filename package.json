@@ -1,0 +1,41 @@
+{
+  "name": "ExpLibuv",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "npx react-native run-android",
+    "ios": "npx react-native run-ios",
+    "start": "npx react-native start",
+    "start:clean": "watchman watch-del $PWD; watchman watch-project $PWD && npm start --reset-cache"
+  },
+  "dependencies": {
+    "b4a": "^1.6.0",
+    "eventemitter2": "^6.4.9",
+    "path": "npm:path-browserify@^1.0.1",
+    "random-access-file": "^4.0.0",
+    "react": "18.1.0",
+    "react-native": "0.70.0",
+    "stream": "npm:readable-stream@^3.6.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.19.3",
+    "@babel/plugin-proposal-logical-assignment-operators": "^7.18.9",
+    "@babel/runtime": "^7.19.0",
+    "@types/node": "^18.7.23",
+    "@types/react": "~18.0.14",
+    "@types/react-native": "^0.70.4",
+    "brittle": "github:mafintosh/brittle#next",
+    "esbuild": "^0.12.29",
+    "execa": "^6.1.0",
+    "glob": "^8.0.3",
+    "metro-minify-esbuild": "^0.2.0",
+    "metro-react-native-babel-preset": "^0.72.1",
+    "patch-package": "^6.4.7",
+    "postinstall-postinstall": "^2.1.0",
+    "typescript": "^4.8.4",
+    "which": "^2.0.2"
+  },
+  "resolutions": {
+    "@types/react": "^18"
+  }
+}

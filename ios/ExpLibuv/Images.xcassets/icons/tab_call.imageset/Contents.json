@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "tab_call.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

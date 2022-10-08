@@ -1,0 +1,10 @@
+android/**/*
+!android/**/*.so
+!android/**/*.h
+!android/**/*/
+android/**/pkgconfig/
+android/**/CMakeFiles/
+android/**/Testing/
+
+ios/*/iphoneos/
+ios/*/iphonesimulator/

@@ -1,0 +1,118 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+
+    compileSdk rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+                arguments "-DANDROID_STL=c++_shared",
+                        "-DROOT_DIR=$rootDir/.."
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    packagingOptions {
+        excludes = ["**/libc++_shared.so", "**/libjsi.so", "**/libfbjni.so", "**/libreactnativejni.so"]
+    }
+    buildFeatures {
+        prefab true
+    }
+    configurations {
+        extractSO
+        extractHeaders
+    }
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+        url("$rootDir/../node_modules/react-native/android")
+    }
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    //noinspection GradleDynamicVersion
+    implementation "com.facebook.react:react-native:+"
+
+    extractHeaders("com.facebook.fbjni:fbjni:+:headers")
+    //noinspection GradleDynamicVersion
+    extractSO("com.facebook.fbjni:fbjni:+")
+
+    def buildType = "debug"
+    tasks.all({ task ->
+      if (task.name == "buildCMakeRelease") {
+        buildType = "release"
+      }
+    })
+    def rnAAR = fileTree("${rootDir}/../node_modules/react-native/android").matching({ it.include "**/react-native/**/*${buildType}.aar" }).singleFile
+    extractSO(files(rnAAR))
+
+    implementation 'androidx.webkit:webkit:1.4.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}
+
+task extractSOTask {
+    doLast {
+        configurations.extractSO.files.each {
+            def file = it.absoluteFile
+            copy {
+                from zipTree(file)
+                into "$buildDir/native_deps"
+                include "jni/**/*.so"
+            }
+        }
+    }
+}
+
+task extractHeadersTask {
+    doLast {
+        configurations.extractHeaders.files.each {
+            def file = it.absoluteFile
+            copy {
+                from zipTree(file)
+                into "$buildDir/native_deps/include"
+                include "**/*.h"
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (!task.name.contains('Clean') && (task.name.contains('externalNative') || task.name.contains('CMake'))) {
+        task.dependsOn(extractHeadersTask)
+        task.dependsOn(extractSOTask)
+    }
+}
