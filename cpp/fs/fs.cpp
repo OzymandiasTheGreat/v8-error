@@ -406,61 +406,82 @@ jsi::Value FSBinding::get(jsi::Runtime &rt, const jsi::PropNameID &name) {
     return JSI_UNDEFINED;
   });
 
-  JSI_HOSTOBJECT_METHOD("fs_stat", 2, {
-    auto filename = JSI_ARG_STRING(0);
+//  JSI_HOSTOBJECT_METHOD("fs_stat", 2, {
+    if (propertyName == "fs_stat") {
+      return jsi::Function::createFromHostFunction(rt, name, 2,
+                                                   [this](jsi::Runtime &rt, jsi::Value const &,
+                                                          jsi::Value const *arguments,
+                                                          size_t argc) {
+                                                       auto filename = JSI_ARG_STRING(0);
 
-    bool hasCallback = argc > 1;
+                                                       bool hasCallback = argc > 1;
 
-    auto req = new FSRequest;
-    req->binding = this;
-    req->rt = &rt;
-    if (hasCallback) {
-      req->callback = std::make_unique<jsi::Function>(JSI_ARG_FUNCTION(1));
+                                                       auto req = new FSRequest;
+                                                       req->binding = this;
+                                                       req->rt = &rt;
+                                                       if (hasCallback) {
+                                                         req->callback = std::make_unique<jsi::Function>(
+                                                                 JSI_ARG_FUNCTION(1));
+                                                       }
+
+                                                       auto on_stat = [](uv_fs_t *uv_req) {
+                                                           auto req = static_cast<FSRequest *>(uv_req->data);
+
+                                                           jsi::Runtime &rt = *req->rt;
+                                                           if (req->binding->_callInvoker->isValid()) {
+                                                             if (uv_req->result < 0) {
+                                                               JSI_MAKE_UV_ERROR(res,
+                                                                                 static_cast<int>(uv_req->result),
+                                                                                 req->binding->_uvBinding);
+                                                               req->callback->call(rt, res_err);
+                                                             } else {
+                                                               jsi::Object res = jsi::Object(rt);
+                                                               res.setProperty(rt, "size",
+                                                                               JSI_NUMBER(
+                                                                                       uv_req->statbuf.st_size));
+                                                               res.setProperty(rt, "directory",
+                                                                               JSI_BOOL(
+                                                                                       (uv_req->statbuf.st_mode &
+                                                                                        S_IFMT) ==
+                                                                                       S_IFDIR));
+                                                               req->callback->call(rt,
+                                                                                   JSI_UNDEFINED,
+                                                                                   res);
+                                                             }
+                                                           }
+
+                                                           uv_fs_req_cleanup(&req->uv_req);
+                                                           delete req;
+                                                       };
+
+                                                       int res = uv_fs_stat(_uvBinding->uv_loop(),
+                                                                            &req->uv_req,
+                                                                            filename.data(),
+                                                                            hasCallback ? on_stat
+                                                                                        : nullptr);
+                                                       if (hasCallback || res == 0) {
+                                                         jsi::Object obj = jsi::Object(rt);
+                                                         obj.setProperty(rt, "size", JSI_NUMBER(
+                                                                 req->uv_req.statbuf.st_size));
+                                                         obj.setProperty(rt, "directory", JSI_BOOL(
+                                                                 (req->uv_req.statbuf.st_mode &
+                                                                  S_IFMT) == S_IFDIR));
+
+                                                         if (!hasCallback) {
+                                                           delete req;
+                                                         }
+
+                                                         return jsi::Value(rt, obj);
+                                                       }
+
+                                                       JSI_MAKE_UV_ERROR(exc, res, _uvBinding);
+                                                       JSI_CALL_THROWER(exc_err);
+
+                                                       delete req;
+
+                                                       return JSI_UNDEFINED;
+                                                   });
     }
-
-    auto on_stat = [](uv_fs_t* uv_req) {
-      auto req = static_cast<FSRequest*>(uv_req->data);
-
-      jsi::Runtime& rt = *req->rt;
-      if (req->binding->_callInvoker->isValid()) {
-        if (uv_req->result < 0) {
-          JSI_MAKE_UV_ERROR(res, static_cast<int>(uv_req->result), req->binding->_uvBinding);
-          req->callback->call(rt, res_err);
-        } else {
-          jsi::Object res = jsi::Object(rt);
-          res.setProperty(rt, "size", JSI_NUMBER(uv_req->statbuf.st_size));
-          res.setProperty(rt, "directory", JSI_BOOL((uv_req->statbuf.st_mode & S_IFMT) == S_IFDIR));
-          req->callback->call(rt, JSI_UNDEFINED, res);
-        }
-      }
-
-      uv_fs_req_cleanup(&req->uv_req);
-      delete req;
-    };
-
-    int res = uv_fs_stat(_uvBinding->uv_loop(),
-                         &req->uv_req,
-                         filename.data(),
-                         hasCallback ? on_stat : nullptr);
-    if (hasCallback || res == 0) {
-      jsi::Object obj = jsi::Object(rt);
-      obj.setProperty(rt, "size", JSI_NUMBER(req->uv_req.statbuf.st_size));
-      obj.setProperty(rt, "directory", JSI_BOOL((req->uv_req.statbuf.st_mode & S_IFMT) == S_IFDIR));
-
-      if (!hasCallback) {
-        delete req;
-      }
-
-      return jsi::Value(rt, obj);
-    }
-
-    JSI_MAKE_UV_ERROR(exc, res, _uvBinding);
-    JSI_CALL_THROWER(exc_err);
-
-    delete req;
-
-    return JSI_UNDEFINED;
-  });
 
   JSI_HOSTOBJECT_METHOD("fs_fstat", 2, {
     int fd = JSI_ARG_UINT32(0);
